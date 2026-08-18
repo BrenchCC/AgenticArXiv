@@ -1,0 +1,88 @@
+================================================================================
+ArXiv 计算机科学论文列表
+生成时间: 2026-04-18 16:17:09
+论文数量: 5
+================================================================================
+
+论文 1: MM-WebAgent: A Hierarchical Multimodal Web Agent for Webpage Generation
+------------------------------------------------------------
+ID: 2604.15309v1
+作者: Yan Li, Zezi Zeng, Yifan Yang, Yuqing Yang, Ning Liao, Weiwei Guo, Lili Qiu, Mingxi Cheng, Qi Dai, Zhendong Wang, Zhengyuan Yang, Xue Yang, Ji Li, Lijuan Wang, Chong Luo
+发表时间: 2026-04-16 17:59:49
+更新时间: 2026-04-16 17:59:49
+主要分类: cs.CV
+所有分类: cs.CV, cs.AI, cs.CL
+PDF链接: https://arxiv.org/pdf/2604.15309v1
+摘要: The rapid progress of Artificial Intelligence Generated Content (AIGC) tools enables images, videos, and visualizations to be created on demand for webpage design, offering a flexible and increasingly...
+相关链接:
+  - https://arxiv.org/abs/2604.15309v1
+  - https://arxiv.org/pdf/2604.15309v1
+
+================================================================================
+
+论文 2: Generalization in LLM Problem Solving: The Case of the Shortest Path
+------------------------------------------------------------
+ID: 2604.15306v1
+作者: Yao Tong, Jiayuan Ye, Anastasia Borovykh, Reza Shokri
+发表时间: 2026-04-16 17:59:43
+更新时间: 2026-04-16 17:59:43
+主要分类: cs.AI
+所有分类: cs.AI, cs.LG
+PDF链接: https://arxiv.org/pdf/2604.15306v1
+摘要: Whether language models can systematically generalize remains actively debated. Yet empirical performance is jointly shaped by multiple factors such as training data, training paradigms, and inference...
+相关链接:
+  - https://arxiv.org/abs/2604.15306v1
+  - https://arxiv.org/pdf/2604.15306v1
+
+================================================================================
+
+论文 3: Diagnosing LLM Judge Reliability: Conformal Prediction Sets and Transitivity Violations
+------------------------------------------------------------
+ID: 2604.15302v1
+作者: Manan Gupta, Dhruv Kumar
+发表时间: 2026-04-16 17:58:21
+更新时间: 2026-04-16 17:58:21
+主要分类: cs.AI
+所有分类: cs.AI, cs.CL, cs.LG
+PDF链接: https://arxiv.org/pdf/2604.15302v1
+备注: Under Review
+摘要: LLM-as-judge frameworks are increasingly used for automatic NLG evaluation, yet their per-instance reliability remains poorly understood. We present a two-pronged diagnostic toolkit applied to SummEva...
+相关链接:
+  - https://arxiv.org/abs/2604.15302v1
+  - https://arxiv.org/pdf/2604.15302v1
+
+================================================================================
+
+论文 4: How Do LLMs and VLMs Understand Viewpoint Rotation Without Vision? An Interpretability Study
+------------------------------------------------------------
+ID: 2604.15294v1
+作者: Zhen Yang, Ping Jian, Zhongbin Guo, Zuming Zhang, Chengzhi Li, Yonghong Deng, Xinyue Zhang, Wenpeng Lu
+发表时间: 2026-04-16 17:55:19
+更新时间: 2026-04-16 17:55:19
+主要分类: cs.AI
+所有分类: cs.AI
+PDF链接: https://arxiv.org/pdf/2604.15294v1
+备注: Published as a main-conference paper at The 64th Annual Meeting of the Association for Computational Linguistics (ACL 2026)
+摘要: Over the past year, spatial intelligence has drawn increasing attention. Many prior works study it from the perspective of visual-spatial intelligence, where models have access to visuospatial informa...
+相关链接:
+  - https://arxiv.org/abs/2604.15294v1
+  - https://arxiv.org/pdf/2604.15294v1
+
+================================================================================
+
+论文 5: AD4AD: Benchmarking Visual Anomaly Detection Models for Safer Autonomous Driving
+------------------------------------------------------------
+ID: 2604.15291v1
+作者: Fabrizio Genilotti, Arianna Stropeni, Gionata Grotto, Francesco Borsatti, Manuel Barusco, Davide Dalle Pezze, Gian Antonio Susto
+发表时间: 2026-04-16 17:54:53
+更新时间: 2026-04-16 17:54:53
+主要分类: cs.CV
+所有分类: cs.CV, cs.AI
+PDF链接: https://arxiv.org/pdf/2604.15291v1
+摘要: The reliability of a machine vision system for autonomous driving depends heavily on its training data distribution. When a vehicle encounters significantly different conditions, such as atypical obst...
+相关链接:
+  - https://arxiv.org/abs/2604.15291v1
+  - https://arxiv.org/pdf/2604.15291v1
+
+================================================================================
+

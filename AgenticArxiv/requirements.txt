@@ -1,0 +1,13 @@
+arxiv
+requests
+python-dotenv
+loguru
+pydantic
+fastapi
+uvicorn[standard]
+pdf2zh
+sqlalchemy>=2.0
+pymysql
+fire
+mcp>=1.0
+sqlalchemy
