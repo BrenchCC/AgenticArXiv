@@ -87,6 +87,14 @@ class ChatLogItem(BaseModel):
     content: Optional[str] = None
     model: Optional[str] = None
     agent_type: Optional[str] = None
+    total_time_ms: Optional[int] = None
+    total_llm_ms: Optional[int] = None
+    total_tool_ms: Optional[int] = None
+    framework_overhead_ms: Optional[int] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+    termination_type: Optional[str] = None
     created_at: Optional[datetime] = None
 
 
@@ -98,6 +106,8 @@ class AgentStepItem(BaseModel):
     observation: Optional[str] = None
     llm_latency_ms: Optional[int] = None
     tool_latency_ms: Optional[int] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
     created_at: Optional[datetime] = None
 
 

@@ -20,6 +20,7 @@ from models.store import store
 from utils.logger import log
 
 from services.runtime import event_bus, translate_runner
+from services.chat_run_manager import chat_run_manager
 from services.log_service import log_service
 from config import settings
 
@@ -164,6 +165,15 @@ class ChatRequest(BaseModel):
         default="regex",
         description="Agent 架构: regex | mcp | skill_cli",
     )
+    run_id: Optional[str] = Field(
+        default=None,
+        description="前端生成的本次对话运行ID，用于手动停止",
+    )
+
+
+class CancelChatResponse(BaseModel):
+    run_id: str
+    cancelled: bool
 
 
 class ChatResponse(BaseModel):
@@ -178,6 +188,7 @@ class ChatResponse(BaseModel):
         default_factory=list, description="该 session 的最近任务（可选）"
     )
     agent_type: str = Field(default="regex", description="使用的 Agent 架构")
+    termination_type: str = Field(default="COMPLETED", description="任务结束原因")
 
 
 class PdfAssetsResponse(BaseModel):
@@ -468,6 +479,9 @@ def pdf_translate_async(req: TranslatePdfRequest) -> CreateTranslateTaskResponse
 # ---------------- chat ----------------
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
+    run_id = (req.run_id or "").strip()
+    if run_id:
+        chat_run_manager.register(run_id)
     try:
         from utils.llm_client import get_env_llm_client
 
@@ -484,7 +498,10 @@ def chat(req: ChatRequest) -> ChatResponse:
             agent = ReActAgent(llm_client)
 
         result = agent.run(
-            task=req.message, agent_model=req.agent_model, session_id=req.session_id
+            task=req.message,
+            agent_model=req.agent_model,
+            session_id=req.session_id,
+            cancellation_check=(lambda: chat_run_manager.is_cancelled(run_id)) if run_id else None,
         )
 
         papers = store.get_last_papers(req.session_id)
@@ -509,10 +526,27 @@ def chat(req: ChatRequest) -> ChatResponse:
             translate_assets=list(translate_assets),
             tasks=tasks,
             agent_type=req.agent_type,
+            termination_type=result.get("termination_type", "COMPLETED"),
         )
     except Exception as e:
         log.error(f"/chat 失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"chat失败: {str(e)}")
+    finally:
+        if run_id:
+            chat_run_manager.finish(run_id)
+
+
+@router.post("/chat/{run_id}/cancel", response_model=CancelChatResponse)
+def cancel_chat(run_id: str) -> CancelChatResponse:
+    """Request cooperative cancellation for an active chat run.
+
+    Args:
+        run_id: Frontend-generated identifier of the active request.
+    """
+    return CancelChatResponse(
+        run_id=run_id,
+        cancelled=chat_run_manager.cancel(run_id),
+    )
 
 
 @router.get("/pdf/assets", response_model=PdfAssetsResponse)

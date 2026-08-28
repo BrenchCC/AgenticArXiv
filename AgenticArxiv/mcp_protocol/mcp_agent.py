@@ -86,14 +86,18 @@ class MCPAgent(BaseAgent):
         return result
 
     def run(
-        self, task: str, agent_model: str = None, session_id: str = "default"
+        self,
+        task: str,
+        agent_model: str = None,
+        session_id: str = "default",
+        cancellation_check=None,
     ) -> Dict[str, Any]:
         """覆写 run 以在 MCP session 上下文中执行"""
-        return self._run_with_mcp(task, agent_model, session_id)
+        return self._run_with_mcp(task, agent_model, session_id, cancellation_check)
 
     # ---------- MCP 相关 ----------
 
-    def _run_with_mcp(self, task, agent_model, session_id):
+    def _run_with_mcp(self, task, agent_model, session_id, cancellation_check=None):
         """在 MCP 会话中运行完整的 agent 循环"""
 
         async def _async_run():
@@ -126,7 +130,12 @@ class MCPAgent(BaseAgent):
                     # 保持 event loop 空闲以处理 MCP JSON-RPC 调用
                     result = await self._loop.run_in_executor(
                         None,
-                        lambda: super(MCPAgent, self).run(task, agent_model, session_id),
+                        lambda: super(MCPAgent, self).run(
+                            task,
+                            agent_model,
+                            session_id,
+                            cancellation_check,
+                        ),
                     )
 
                     self._session = None

@@ -102,6 +102,14 @@ class ChatLogRow(Base):
     content = Column(Text, nullable=True)
     model = Column(String(128), nullable=True)
     agent_type = Column(String(32), nullable=True)  # regex | mcp | skill_cli
+    total_time_ms = Column(Integer, nullable=True)
+    total_llm_ms = Column(Integer, nullable=True)
+    total_tool_ms = Column(Integer, nullable=True)
+    framework_overhead_ms = Column(Integer, nullable=True)
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
+    total_tokens = Column(Integer, nullable=True)
+    termination_type = Column(String(32), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -117,4 +125,6 @@ class AgentStepRow(Base):
     observation = Column(Text, nullable=True)
     llm_latency_ms = Column(Integer, nullable=True)
     tool_latency_ms = Column(Integer, nullable=True)
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.now)

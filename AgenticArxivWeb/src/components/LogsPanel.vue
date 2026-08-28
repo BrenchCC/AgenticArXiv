@@ -33,6 +33,14 @@
             <span v-if="m.role === 'assistant' && m.agent_type" class="agent-type-tag">{{ agentLabel(m.agent_type) }}</span>
             <span class="time">{{ fmtDate(m.created_at) }}</span>
             <span v-if="m.model" class="model">{{ m.model }}</span>
+            <span v-if="m.termination_type" class="metric">{{ m.termination_type }}</span>
+            <span v-if="m.total_time_ms != null" class="metric">总耗时: {{ m.total_time_ms }}ms</span>
+            <span v-if="m.total_llm_ms != null" class="metric">LLM: {{ m.total_llm_ms }}ms</span>
+            <span v-if="m.total_tool_ms != null" class="metric">工具: {{ m.total_tool_ms }}ms</span>
+            <span v-if="m.framework_overhead_ms != null" class="metric">框架: {{ m.framework_overhead_ms }}ms</span>
+            <span v-if="m.prompt_tokens != null" class="metric">Prompt: {{ m.prompt_tokens }}</span>
+            <span v-if="m.completion_tokens != null" class="metric">Completion: {{ m.completion_tokens }}</span>
+            <span v-if="m.total_tokens != null" class="metric">Tokens: {{ m.total_tokens }}</span>
             <button
               v-if="m.role === 'assistant'"
               class="btn ghost expand-btn"
@@ -52,6 +60,8 @@
                   <span v-if="step.action_name" class="action-name">{{ step.action_name }}</span>
                   <span class="latency" v-if="step.llm_latency_ms">LLM: {{ step.llm_latency_ms }}ms</span>
                   <span class="latency" v-if="step.tool_latency_ms">Tool: {{ step.tool_latency_ms }}ms</span>
+                  <span class="latency" v-if="step.prompt_tokens != null">Prompt: {{ step.prompt_tokens }}</span>
+                  <span class="latency" v-if="step.completion_tokens != null">Completion: {{ step.completion_tokens }}</span>
                 </div>
                 <div v-if="step.thought" class="step-section">
                   <div class="step-label">Thought</div>

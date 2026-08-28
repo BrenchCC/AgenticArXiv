@@ -82,6 +82,7 @@ export interface ChatRequest {
   message: string;
   agent_model?: string | null;
   agent_type?: AgentType;
+  run_id?: string;
 }
 
 export interface ChatResponse {
@@ -97,6 +98,7 @@ export interface ChatResponse {
   // 后端新增 tasks
   tasks?: TranslateTask[];
   agent_type?: AgentType;
+  termination_type?: string;
 }
 
 export interface PdfAssetsResponse {
@@ -133,6 +135,14 @@ export interface ChatLogItem {
   content: string | null;
   model: string | null;
   agent_type: string | null;
+  total_time_ms: number | null;
+  total_llm_ms: number | null;
+  total_tool_ms: number | null;
+  framework_overhead_ms: number | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number | null;
+  termination_type: string | null;
   created_at: string | null;
 }
 
@@ -144,6 +154,8 @@ export interface AgentStepItem {
   observation: string | null;
   llm_latency_ms: number | null;
   tool_latency_ms: number | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
   created_at: string | null;
 }
 

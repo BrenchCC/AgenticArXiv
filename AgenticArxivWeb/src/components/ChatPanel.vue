@@ -140,8 +140,14 @@
           快捷: 拉取AI 5篇
         </button>
 
-        <button class="btn primary" type="button" @click="send" :disabled="store.loading || !draft.trim()">
-          {{ store.loading ? "发送中..." : "发送" }}
+        <button v-if="store.loading" class="btn danger" type="button" @click="store.stopChat()">
+          停止
+        </button>
+        <button v-else class="btn primary" type="button" @click="send" :disabled="!draft.trim()">
+          发送
+        </button>
+        <button class="btn" type="button" @click="store.resendLastMessage()" :disabled="!store.lastSentMessage">
+          重发
         </button>
       </div>
     </footer>

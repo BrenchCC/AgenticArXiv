@@ -45,6 +45,9 @@ export const useAppStore = defineStore("app", {
     sessionId: (localStorage.getItem("session_id") || "demo1") as string,
 
     loading: false,
+    currentRunId: "" as string,
+    currentAbortController: null as AbortController | null,
+    lastSentMessage: "" as string,
     lastError: "" as string,
 
     messages: [] as ChatMessage[],
@@ -301,9 +304,19 @@ export const useAppStore = defineStore("app", {
       const text = (message || "").trim();
       if (!text) return;
 
+      if (this.loading) {
+        await this.stopChat(false);
+      }
+
       this.ensureSse();
 
+      const runId = crypto.randomUUID();
+      const controller = new AbortController();
+
       this.loading = true;
+      this.currentRunId = runId;
+      this.currentAbortController = controller;
+      this.lastSentMessage = text;
       this.isThinking = true;
       this.thinkingSteps = [];
       this._newTaskIds = new Set();
@@ -316,7 +329,10 @@ export const useAppStore = defineStore("app", {
           session_id: this.sessionId,
           message: text,
           agent_type: this.agentType,
-        });
+          run_id: runId,
+        }, { signal: controller.signal });
+
+        if (this.currentRunId !== runId) return;
 
         const data = res.data;
         const history = data.history || [];
@@ -336,16 +352,57 @@ export const useAppStore = defineStore("app", {
           for (const t of data.tasks) this._upsertTask(t);
         }
       } catch (e: any) {
+        if (e?.code === "ERR_CANCELED" || controller.signal.aborted) return;
+        if (this.currentRunId !== runId) return;
         const msg = e?.response?.data?.detail || e?.message || String(e);
         this.lastError = msg;
         this.pushAssistant(`请求失败：${msg}`);
       } finally {
+        if (this.currentRunId !== runId) return;
         this.loading = false;
+        this.currentRunId = "";
+        this.currentAbortController = null;
         this.isThinking = false;
         this.thinkingSteps = [];
         this._newTaskIds = new Set();
         this.thinkingTaskId = "";
       }
+    },
+
+    async stopChat(showMessage: boolean = true) {
+      const runId = this.currentRunId;
+      const controller = this.currentAbortController;
+      if (!runId || !controller) return;
+
+      this.currentRunId = "";
+      this.currentAbortController = null;
+      this.loading = false;
+      this.isThinking = false;
+      this.thinkingSteps = [];
+      this.thinkingTaskId = "";
+      controller.abort();
+
+      if (showMessage) {
+        this.pushAssistant("已停止本次请求。已开始的单步操作会在返回后结束，不会继续执行新的工具调用。");
+      }
+
+      try {
+        await api.post(`/chat/${encodeURIComponent(runId)}/cancel`);
+      } catch {
+        // 浏览器连接已中断时，后端取消接口失败不影响本地停止状态。
+      }
+    },
+
+    async resendLastMessage() {
+      const message = this.lastSentMessage || [...this.messages]
+        .reverse()
+        .find((item) => item.role === "user")?.content;
+      if (!message) return;
+
+      if (this.loading) {
+        await this.stopChat(false);
+      }
+      await this.sendChat(message);
     },
 
     async fetchPdfAssets() {

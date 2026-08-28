@@ -1,7 +1,10 @@
-.PHONY: start stop restart logs install
+.PHONY: start debug stop restart logs install
 
 start:
 	@./bin/start.sh --logs
+
+debug:
+	@./bin/debug.sh
 
 stop:
 	@./bin/shutdown.sh

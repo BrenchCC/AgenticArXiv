@@ -141,6 +141,8 @@ celerybeat.pid
 .env
 .envrc
 .venv
+.run/
+AgenticArxiv/output/agentic_arxiv.db
 env/
 venv/
 ENV/
@@ -429,3 +431,5 @@ CLAUDE.md
 .omc
 .codex*
 .claude*
+
+AgenticArxiv/output/*.txt

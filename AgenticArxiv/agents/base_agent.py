@@ -3,7 +3,7 @@ import json
 import time
 import uuid
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Callable, Dict, Any, Optional, Tuple, List
 
 from utils.llm_client import LLMClient
 from utils.logger import log
@@ -64,8 +64,20 @@ class BaseAgent(ABC):
     # ---------- 通用执行循环 ----------
 
     def run(
-        self, task: str, agent_model: str = None, session_id: str = "default"
+        self,
+        task: str,
+        agent_model: str = None,
+        session_id: str = "default",
+        cancellation_check: Optional[Callable[[], bool]] = None,
     ) -> Dict[str, Any]:
+        """Run a task until completion, error, or cooperative cancellation.
+
+        Args:
+            task: User task to execute.
+            agent_model: Optional model override.
+            session_id: Session identifier used for state and logs.
+            cancellation_check: Optional callback returning True after a stop request.
+        """
         log.info(f"[{self.__class__.__name__}] 开始执行任务: {task}")
         run_start = time.time()
         self.session_id = session_id
@@ -88,9 +100,15 @@ class BaseAgent(ABC):
         history: List[Dict[str, str]] = []
         step_timings: List[Dict[str, int]] = []
         token_usage: Dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        termination_type = "COMPLETED"
 
         for iteration in range(self.max_iterations):
             log.info(f"第 {iteration + 1} 次迭代")
+
+            if self._is_cancelled(cancellation_check):
+                termination_type = "CANCELLED"
+                self._append_cancelled_step(history, step_timings, msg_id, iteration, session_id)
+                break
 
             history_text = self.format_history(history)
             messages, extra = self.build_messages(enriched_task, tools_description, history_text)
@@ -100,6 +118,8 @@ class BaseAgent(ABC):
             thought = ""
             action_dict = None
             observation = ""
+            step_prompt_tokens = 0
+            step_completion_tokens = 0
 
             try:
                 t0 = time.time()
@@ -115,9 +135,28 @@ class BaseAgent(ABC):
 
                 # 累计 token 用量
                 usage = response.get("usage") or {}
-                token_usage["prompt_tokens"] += usage.get("prompt_tokens", 0)
-                token_usage["completion_tokens"] += usage.get("completion_tokens", 0)
-                token_usage["total_tokens"] += usage.get("total_tokens", 0)
+                step_prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
+                step_completion_tokens = int(usage.get("completion_tokens", 0) or 0)
+                step_total_tokens = int(
+                    usage.get("total_tokens") or step_prompt_tokens + step_completion_tokens
+                )
+                token_usage["prompt_tokens"] += step_prompt_tokens
+                token_usage["completion_tokens"] += step_completion_tokens
+                token_usage["total_tokens"] += step_total_tokens
+
+                if self._is_cancelled(cancellation_check):
+                    termination_type = "CANCELLED"
+                    self._append_cancelled_step(
+                        history,
+                        step_timings,
+                        msg_id,
+                        iteration,
+                        session_id,
+                        step_prompt_tokens,
+                        step_completion_tokens,
+                        llm_ms,
+                    )
+                    break
 
                 thought, action_dict = self.parse_response(response)
                 log.info(f"Thought: {thought}")
@@ -127,10 +166,36 @@ class BaseAgent(ABC):
                     observation = "任务完成"
                     history.append({"thought": thought, "action": "FINISH", "observation": observation})
                     step_timings.append({"llm_ms": llm_ms, "tool_ms": 0})
-                    self._log_step(msg_id, iteration, thought, "FINISH", "{}", observation, llm_ms, 0, session_id)
+                    self._log_step(
+                        msg_id,
+                        iteration,
+                        thought,
+                        "FINISH",
+                        "{}",
+                        observation,
+                        llm_ms,
+                        0,
+                        session_id,
+                        step_prompt_tokens,
+                        step_completion_tokens,
+                    )
                     break
 
                 # 带副作用的工具执行
+                if self._is_cancelled(cancellation_check):
+                    termination_type = "CANCELLED"
+                    self._append_cancelled_step(
+                        history,
+                        step_timings,
+                        msg_id,
+                        iteration,
+                        session_id,
+                        step_prompt_tokens,
+                        step_completion_tokens,
+                        llm_ms,
+                    )
+                    break
+
                 t1 = time.time()
                 observation = self._execute_with_side_effects(action_dict)
                 tool_ms = int((time.time() - t1) * 1000)
@@ -145,16 +210,19 @@ class BaseAgent(ABC):
                     msg_id, iteration, thought,
                     action_dict.get("name", ""), json.dumps(action_dict.get("args", {}), ensure_ascii=False),
                     observation[:4000], llm_ms, tool_ms, session_id,
+                    step_prompt_tokens, step_completion_tokens,
                 )
 
                 if iteration == self.max_iterations - 1:
                     log.warning("达到最大迭代次数，强制结束")
                     history.append({"thought": "达到最大迭代次数", "action": "FORCE_STOP", "observation": "迭代限制"})
+                    termination_type = "MAX_ITERATIONS"
                     self._log_step(msg_id, iteration + 1, "达到最大迭代次数", "FORCE_STOP", "", "迭代限制", 0, 0, session_id)
                     break
 
             except Exception as e:
                 error_msg = f"LLM调用失败: {str(e)}"
+                termination_type = "ERROR"
                 log.error(error_msg)
                 history.append({"thought": "LLM调用失败", "action": "ERROR", "observation": error_msg})
                 step_timings.append({"llm_ms": llm_ms, "tool_ms": 0})
@@ -170,14 +238,31 @@ class BaseAgent(ABC):
                 break
         reply = reply or final_observation
 
-        try:
-            log_service.create_chat_log(session_id, msg_id + "_reply", "assistant", reply, model=agent_model, agent_type=self.agent_type)
-        except Exception as e:
-            log.warning(f"Failed to log assistant reply: {e}")
-
         total_time_ms = int((time.time() - run_start) * 1000)
         total_llm_ms = sum(s["llm_ms"] for s in step_timings)
         total_tool_ms = sum(s["tool_ms"] for s in step_timings)
+
+        try:
+            log_service.create_chat_log(
+                session_id,
+                msg_id + "_reply",
+                "assistant",
+                reply,
+                model=agent_model,
+                agent_type=self.agent_type,
+                metrics={
+                    "total_time_ms": total_time_ms,
+                    "total_llm_ms": total_llm_ms,
+                    "total_tool_ms": total_tool_ms,
+                    "framework_overhead_ms": total_time_ms - total_llm_ms - total_tool_ms,
+                    "prompt_tokens": token_usage["prompt_tokens"],
+                    "completion_tokens": token_usage["completion_tokens"],
+                    "total_tokens": token_usage["total_tokens"],
+                },
+                termination_type=termination_type,
+            )
+        except Exception as e:
+            log.warning(f"Failed to log assistant reply: {e}")
 
         result = {
             "task": task,
@@ -187,6 +272,7 @@ class BaseAgent(ABC):
             "total_time_ms": total_time_ms,
             "iteration_count": len(history),
             "agent_type": self.agent_type,
+            "termination_type": termination_type,
             "timing": {
                 "total_llm_ms": total_llm_ms,
                 "total_tool_ms": total_tool_ms,
@@ -198,6 +284,55 @@ class BaseAgent(ABC):
         log.info(f"任务执行完成，共 {len(history)} 步, 总耗时 {total_time_ms}ms (LLM {total_llm_ms}ms + Tool {total_tool_ms}ms)")
         log.info("-" * 80)
         return result
+
+    @staticmethod
+    def _is_cancelled(cancellation_check: Optional[Callable[[], bool]]) -> bool:
+        """Return whether the caller requested cooperative cancellation.
+
+        Args:
+            cancellation_check: Optional callback supplied by the request handler.
+        """
+        return bool(cancellation_check and cancellation_check())
+
+    def _append_cancelled_step(
+        self,
+        history: List[Dict[str, str]],
+        step_timings: List[Dict[str, int]],
+        msg_id: str,
+        step_index: int,
+        session_id: str,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        llm_ms: int = 0,
+    ) -> None:
+        """Persist one terminal cancellation step and append it to the history.
+
+        Args:
+            history: Current agent history.
+            step_timings: Current per-step timing records.
+            msg_id: Parent user message identifier.
+            step_index: Zero-based iteration index.
+            session_id: Session identifier for SSE publication.
+            prompt_tokens: Tokens used by the interrupted LLM call, if any.
+            completion_tokens: Tokens generated by the interrupted LLM call, if any.
+        """
+        thought = "用户已停止本次请求"
+        observation = "请求已停止；不会继续执行新的 Agent 步骤或工具调用。"
+        history.append({"thought": thought, "action": "CANCELLED", "observation": observation})
+        step_timings.append({"llm_ms": llm_ms, "tool_ms": 0})
+        self._log_step(
+            msg_id,
+            step_index,
+            thought,
+            "CANCELLED",
+            "{}",
+            observation,
+            llm_ms,
+            0,
+            session_id,
+            prompt_tokens,
+            completion_tokens,
+        )
 
     # ---------- 会话上下文 ----------
 
@@ -317,6 +452,8 @@ class BaseAgent(ABC):
         thought: str, action_name: str, action_args: str,
         observation: str, llm_ms: int, tool_ms: int,
         session_id: str,
+        prompt_tokens: Optional[int] = None,
+        completion_tokens: Optional[int] = None,
     ):
         try:
             log_service.save_agent_step(
@@ -324,6 +461,8 @@ class BaseAgent(ABC):
                 thought=thought, action_name=action_name,
                 action_args=action_args, observation=observation,
                 llm_latency_ms=llm_ms, tool_latency_ms=tool_ms,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
             )
             event_bus.publish(session_id, {
                 "type": "agent_step",
