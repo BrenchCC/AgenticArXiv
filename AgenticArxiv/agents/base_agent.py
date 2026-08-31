@@ -15,10 +15,24 @@ from services.runtime import translate_runner, event_bus
 from tools.tool_registry import registry
 
 
+class ResponseParseError(ValueError):
+    """Represent a model response that does not contain a valid agent action.
+
+    Args:
+        message: Human-readable description of the parsing problem.
+        thought: Best available reasoning text from the model response.
+    """
+
+    def __init__(self, message: str, thought: str = "") -> None:
+        super().__init__(message)
+        self.thought = thought
+
+
 class BaseAgent(ABC):
     """所有 Agent 方案的基类，封装通用的循环控制、日志、SSE、副作用逻辑"""
 
     agent_type: str = "regex"  # 子类覆写
+    missing_thought_text: str = "未提供思考过程"
 
     def __init__(self, llm_client: LLMClient):
         self.llm_client = llm_client
@@ -39,7 +53,7 @@ class BaseAgent(ABC):
 
     @abstractmethod
     def parse_response(self, raw_response: Dict) -> Tuple[str, Optional[Dict[str, Any]]]:
-        """解析 LLM 响应。返回 (thought, action_dict | None 表示 FINISH)"""
+        """解析 LLM 响应。仅当模型明确输出 FINISH 时返回 None。"""
 
     @abstractmethod
     def invoke_tool(self, tool_name: str, args: Dict[str, Any]) -> Any:
@@ -60,6 +74,35 @@ class BaseAgent(ABC):
                 f"Thought: {s['thought']}\nAction: {s['action']}\nObservation: {s['observation']}"
             )
         return "\n\n".join(parts)
+
+    @staticmethod
+    def extract_response_texts(raw_response: Dict) -> Tuple[str, str]:
+        """Extract answer and reasoning text from a chat completion response.
+
+        Args:
+            raw_response: Raw OpenAI-compatible chat completion response.
+
+        Returns:
+            A tuple containing message content and provider reasoning content.
+        """
+        message = raw_response.get("choices", [{}])[0].get("message", {})
+        content = message.get("content") or ""
+        reasoning_content = message.get("reasoning_content") or ""
+        return str(content), str(reasoning_content)
+
+    def resolve_response_thought(self, thought: str, reasoning_content: str) -> str:
+        """Use provider reasoning when the formatted answer omits Thought.
+
+        Args:
+            thought: Thought extracted from the formatted answer.
+            reasoning_content: Separate reasoning text returned by the provider.
+
+        Returns:
+            The best available thought text for persistence and display.
+        """
+        if thought == self.missing_thought_text and reasoning_content.strip():
+            return reasoning_content.strip()
+        return thought
 
     # ---------- 通用执行循环 ----------
 
@@ -219,6 +262,34 @@ class BaseAgent(ABC):
                     termination_type = "MAX_ITERATIONS"
                     self._log_step(msg_id, iteration + 1, "达到最大迭代次数", "FORCE_STOP", "", "迭代限制", 0, 0, session_id)
                     break
+
+            except ResponseParseError as e:
+                thought = e.thought or self.missing_thought_text
+                if iteration < self.max_iterations - 1:
+                    observation = f"模型响应解析失败：{str(e)}。Agent 将自动重试。"
+                else:
+                    observation = f"模型响应解析失败：{str(e)}。已达到最大重试次数，任务未完成。"
+                    termination_type = "ERROR"
+
+                log.warning(observation)
+                history.append({"thought": thought, "action": "PARSE_ERROR", "observation": observation})
+                step_timings.append({"llm_ms": llm_ms, "tool_ms": 0})
+                self._log_step(
+                    msg_id,
+                    iteration,
+                    thought,
+                    "PARSE_ERROR",
+                    "{}",
+                    observation,
+                    llm_ms,
+                    0,
+                    session_id,
+                    step_prompt_tokens,
+                    step_completion_tokens,
+                )
+                if iteration < self.max_iterations - 1:
+                    continue
+                break
 
             except Exception as e:
                 error_msg = f"LLM调用失败: {str(e)}"

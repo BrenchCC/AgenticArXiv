@@ -1,22 +1,88 @@
 ================================================================================
 ArXiv 计算机科学论文列表
-生成时间: 2026-08-28 15:37:54
-论文数量: 1
+生成时间: 2026-08-31 02:39:43
+论文数量: 5
 ================================================================================
 
-论文 1: Learning a Continuous Sepsis Severity Score Without Hour-by-Hour Supervision: A Two-Site Retrospective Study
+论文 1: WikiSkill: Compiling Agent Experience into Persistent Knowledge for Skill Evolution
 ------------------------------------------------------------
-ID: 2608.27421v1
-作者: Kevin Zhu, Ryan Zhang, Baraa Abed, Tilendra Choudhary, Malvern Madondo, Mehak Arora, Yixuan Yang, Alasdair Gent, Aditya Nagori, Omer T. Inan, Krista L. Haines, Patrick Georgoff, Suresh M. Agarwal, Vijay Krishnamoorthy, Tetsu Ohnuma, Mihai V. Podgoreanu, Michael R. Pinsky, Gilles Clermont, Craig M. Coopersmith, Craig S. Jabaley, Rishikesan Kamaleswaran
-发表时间: 2026-08-27 17:46:21
-更新时间: 2026-08-27 17:46:21
+ID: 2608.27454v1
+作者: Liyan Tang, Cyrus Rashtchian, Chun-Sung Ferng, Andrew Tomkins, Da-Cheng Juan, Tu Vu
+发表时间: 2026-08-27 17:59:11
+更新时间: 2026-08-27 17:59:11
 主要分类: cs.AI
-所有分类: cs.AI, cs.LG
-PDF链接: https://arxiv.org/pdf/2608.27421v1
-摘要: Currently used sepsis severity indices rely on fixed variables and weights established decades ago, which are coarsely discretized and calibrated to a cohort that no longer reflects contemporary criti...
+所有分类: cs.AI, cs.CL
+PDF链接: https://arxiv.org/pdf/2608.27454v1
+摘要: Agent skills package specialized knowledge and workflows into reusable resources that extend AI agent capabilities. Recent work automatically discovers such skills from agent experience, which enables...
 相关链接:
-  - https://arxiv.org/abs/2608.27421v1
-  - https://arxiv.org/pdf/2608.27421v1
+  - https://arxiv.org/abs/2608.27454v1
+  - https://arxiv.org/pdf/2608.27454v1
+
+================================================================================
+
+论文 2: SWE-Prime: Fewer Trajectories, Better Performance
+------------------------------------------------------------
+ID: 2608.27449v1
+作者: Dewu Zheng, Ruizhe Ye, Yanlin Wang, Yang Ye, Hongyu Zhang, Ensheng Shi, Xilin Liu, Yuchi Ma, Jianxing Yu, Zibin Zheng
+发表时间: 2026-08-27 17:58:10
+更新时间: 2026-08-27 17:58:10
+主要分类: cs.SE
+所有分类: cs.SE, cs.AI, cs.CL
+PDF链接: https://arxiv.org/pdf/2608.27449v1
+备注: 9 pages, 5 figures
+摘要: To improve large language models' ability to resolve real-world software issues, prior work has focused on constructing large-scale agent trajectory datasets and performing supervised fine-tuning (SFT...
+相关链接:
+  - https://arxiv.org/abs/2608.27449v1
+  - https://arxiv.org/pdf/2608.27449v1
+
+================================================================================
+
+论文 3: From Static to Dynamic: Benchmarking Real-World Code Review with MCR-Bench
+------------------------------------------------------------
+ID: 2608.27442v1
+作者: Dewu Zheng, Yanlin Wang, Xiwen Wang, Kefeng Duan, Hongyu Zhang, Xilin Liu, Yuchi Ma, Zibin Zheng
+发表时间: 2026-08-27 17:56:24
+更新时间: 2026-08-27 17:56:24
+主要分类: cs.SE
+所有分类: cs.SE, cs.AI, cs.CL
+PDF链接: https://arxiv.org/pdf/2608.27442v1
+备注: Accepted at ISSTA 2026
+摘要: In real-world software development, code review typically involves iterative interactions between developers and reviewers to improve software quality, making the process costly and time-consuming. Al...
+相关链接:
+  - https://arxiv.org/abs/2608.27442v1
+  - https://arxiv.org/pdf/2608.27442v1
+
+================================================================================
+
+论文 4: RedEvoAgent: Automatic Red-Teaming Agent with Experience-Driven Skill Evolution
+------------------------------------------------------------
+ID: 2608.27439v1
+作者: Junjie Zhang, Hui Liu, Kecheng Chen, Xianbo Mo, Changsheng Chen, Haoliang Li
+发表时间: 2026-08-27 17:55:33
+更新时间: 2026-08-27 17:55:33
+主要分类: cs.CR
+所有分类: cs.CR, cs.AI
+PDF链接: https://arxiv.org/pdf/2608.27439v1
+摘要: LLM-based agents are increasingly deployed in product-level execution harnesses, where jailbreaks can trigger harmful tool use and persistent state changes, creating greater risks than unsafe text gen...
+相关链接:
+  - https://arxiv.org/abs/2608.27439v1
+  - https://arxiv.org/pdf/2608.27439v1
+
+================================================================================
+
+论文 5: Mechanistic Reaction Prediction via Discrete Flow Matching on Graph-Structured Electron Occupation
+------------------------------------------------------------
+ID: 2608.27429v1
+作者: Nguyen Xuan-Vu, Octavian Susanu, Daniel Armstrong, Philippe Schwaller
+发表时间: 2026-08-27 17:50:44
+更新时间: 2026-08-27 17:50:44
+主要分类: cs.AI
+所有分类: cs.AI
+PDF链接: https://arxiv.org/pdf/2608.27429v1
+摘要: Chemical reactions are fundamentally transformations in electron space, yet most machine learning approaches model them either through \textit{de novo} generation of product molecules or through heuri...
+相关链接:
+  - https://arxiv.org/abs/2608.27429v1
+  - https://arxiv.org/pdf/2608.27429v1
 
 ================================================================================
 

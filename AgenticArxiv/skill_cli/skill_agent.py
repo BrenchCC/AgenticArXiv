@@ -15,7 +15,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseAgent, ResponseParseError
 from utils.llm_client import LLMClient
 from utils.logger import log
 from skill_cli.skill_prompt import get_skill_prompt
@@ -80,13 +80,14 @@ class SkillAgent(BaseAgent):
         return [{"role": "user", "content": prompt}], {}
 
     def parse_response(self, raw_response: Dict) -> Tuple[str, Optional[Dict[str, Any]]]:
-        content = (
-            raw_response.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
+        content, reasoning_content = self.extract_response_texts(raw_response)
         log.debug(f"LLM响应: {content}")
-        return self._parse_skill_text(content)
+        try:
+            thought, action_dict = self._parse_skill_text(content)
+        except ResponseParseError as e:
+            e.thought = self.resolve_response_thought(e.thought, reasoning_content)
+            raise
+        return self.resolve_response_thought(thought, reasoning_content), action_dict
 
     def invoke_tool(self, tool_name: str, args: Dict[str, Any]) -> Any:
         """通过 subprocess 执行 CLI 命令（从修正后的 args 重建命令）"""
@@ -159,7 +160,7 @@ class SkillAgent(BaseAgent):
         thought_match = re.search(
             r"Thought:\s*(.*?)(?=\nCommand:|$)", response, re.DOTALL
         )
-        thought = thought_match.group(1).strip() if thought_match else "未提供思考过程"
+        thought = thought_match.group(1).strip() if thought_match else self.missing_thought_text
 
         # 提取 Command
         cmd_match = re.search(
@@ -181,14 +182,14 @@ class SkillAgent(BaseAgent):
             raw_cmd = cmd_text.strip()
 
         if not raw_cmd or raw_cmd.upper() == "FINISH":
-            return thought, None
+            raise ResponseParseError("响应中缺少 Command", thought)
 
         log.info(f"解析到的CLI命令: {raw_cmd}")
 
         # 从命令中解析出子命令名和参数
         tool_name, args = self._parse_cli_command(raw_cmd)
         if not tool_name:
-            return thought, None
+            raise ResponseParseError("Command 不是有效的工具命令或 FINISH", thought)
 
         # 映射到 registry 工具名
         registry_name = CLI_TO_REGISTRY.get(tool_name, tool_name)

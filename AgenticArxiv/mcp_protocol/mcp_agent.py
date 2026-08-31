@@ -18,7 +18,7 @@ if PROJECT_ROOT not in sys.path:
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseAgent, ResponseParseError
 from agents.prompt_templates import get_react_prompt, format_tool_description
 from utils.llm_client import LLMClient
 from utils.logger import log
@@ -63,13 +63,14 @@ class MCPAgent(BaseAgent):
         return [{"role": "user", "content": prompt}], {}
 
     def parse_response(self, raw_response: Dict) -> Tuple[str, Optional[Dict[str, Any]]]:
-        content = (
-            raw_response.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
+        content, reasoning_content = self.extract_response_texts(raw_response)
         log.debug(f"LLM响应: {content}")
-        return self._parse_react_text(content)
+        try:
+            thought, action_dict = self._parse_react_text(content)
+        except ResponseParseError as e:
+            e.thought = self.resolve_response_thought(e.thought, reasoning_content)
+            raise
+        return self.resolve_response_thought(thought, reasoning_content), action_dict
 
     def invoke_tool(self, tool_name: str, args: Dict[str, Any]) -> Any:
         """通过 MCP tools/call JSON-RPC 调用工具"""
@@ -179,7 +180,7 @@ class MCPAgent(BaseAgent):
         thought_match = re.search(
             r"Thought:\s*(.*?)(?=\nAction:|$)", response, re.DOTALL
         )
-        thought = thought_match.group(1).strip() if thought_match else "未提供思考过程"
+        thought = thought_match.group(1).strip() if thought_match else self.missing_thought_text
 
         action_match = re.search(
             r"Action:\s*(.*?)(?=\nObservation:|$)", response, re.DOTALL
@@ -204,4 +205,8 @@ class MCPAgent(BaseAgent):
             pass
 
         log.error(f"无法解析Action: {action_text}")
-        return thought, None
+        if not response.strip():
+            raise ResponseParseError("模型返回了空内容", thought)
+        if not action_text:
+            raise ResponseParseError("响应中缺少 Action", thought)
+        raise ResponseParseError("Action 不是有效的工具调用或 FINISH", thought)
